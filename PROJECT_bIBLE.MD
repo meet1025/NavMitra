@@ -744,6 +744,40 @@ Before declaring Day 01 complete, verify:
 -   [ ] Project files committed
 -   [ ] Day 01 commit pushed to GitHub
 
+After evaluating the implementation requirements and learning
+objectives, the final technology stack for NavMitra has been
+selected as the MERN Stack.
+
+## MERN Stack
+
+- MongoDB — Database
+- Express.js — Backend framework
+- React — Frontend
+- Node.js — Backend runtime
+
+## Supporting Tools
+
+- Git — Version control
+- GitHub — Remote repository
+- VS Code — Development environment
+- Postman — API testing
+- MongoDB Compass — Database management
+
+## Final Application Flow
+
+React
+   ↓
+REST API
+   ↓
+Node.js + Express.js
+   ↓
+MongoDB
+
+The relational database design and SQL implementation performed in
+earlier days were used for learning, data validation and understanding
+of system relationships. They are not the final database
+implementation of NavMitra.
+
 ------------------------------------------------------------------------
 
 # 25. Current Status
