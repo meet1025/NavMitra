@@ -42,3 +42,17 @@ To convert the NavMitra database design into an actual relational database using
 ## Outcome
 
 The logical database design of NavMitra was converted into an SQL-based relational database structure. The tables, keys and relationships were implemented and tested using sample data.
+
+## Implementation Note
+
+The SQL database implementation performed during this phase was an
+initial relational implementation used for learning, validating the
+identified entities, relationships, keys and data requirements.
+
+After evaluating the implementation approach, the final technology
+stack of NavMitra was changed to MERN.
+
+Therefore:
+
+- MySQL → Initial relational database implementation
+- MongoDB → Final application database

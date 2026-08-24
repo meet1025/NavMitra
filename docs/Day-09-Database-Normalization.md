@@ -27,3 +27,9 @@ redundancy and possible data anomalies.
 The NavMitra database structure was reviewed and
 organized according to normalization principles to
 reduce redundancy and improve data consistency.
+
+> **Implementation Note:**  
+> The relational database normalization performed in this phase was
+> used to understand and validate the data requirements and
+> relationships of NavMitra. The final application implementation
+> will use MongoDB as part of the MERN stack.
