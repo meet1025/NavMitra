@@ -63,3 +63,14 @@ users
 ├── role
 ├── address
 └── createdAt
+
+## Collection Summary
+
+| Collection | Purpose |
+|---|---|
+| users | Stores user account information |
+| products | Stores agricultural products listed by farmers |
+| categories | Stores product categories |
+| orders | Stores orders placed by buyers |
+| payments | Stores payment information |
+| deliveries | Stores delivery information |
