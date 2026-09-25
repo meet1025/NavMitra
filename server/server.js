@@ -3,6 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 const connectDB = require("./config/db");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
@@ -14,6 +15,9 @@ connectDB();
 app.get("/", (req, res) => {
     res.send("NavMitra Backend is running...");
 });
+
+// Authentication routes
+app.use("/api/auth", authRoutes);
 
 const PORT = process.env.PORT || 5000;
 
