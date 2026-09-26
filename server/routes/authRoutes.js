@@ -157,3 +157,16 @@ router.get("/me", authMiddleware, async (req, res) => {
         });
     }
 });
+
+const roleMiddleware = require("../middleware/roleMiddleware");
+
+router.get(
+    "/farmer-test",
+    authMiddleware,
+    roleMiddleware("farmer"),
+    (req, res) => {
+        res.status(200).json({
+            message: "Farmer access granted."
+        });
+    }
+);

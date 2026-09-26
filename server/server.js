@@ -7,6 +7,10 @@ const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
+const farmerRoutes = require("./routes/farmerRoutes");
+
+app.use("/api/farmer", farmerRoutes);
+
 app.use(cors());
 app.use(express.json());
 
