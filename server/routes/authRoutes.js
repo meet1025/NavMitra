@@ -1,3 +1,5 @@
+const authMiddleware = require("../middleware/authMiddleware");
+
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -131,3 +133,27 @@ router.post("/login", async (req, res) => {
 });
 
 module.exports = router;
+
+
+router.get("/me", authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId).select("-password");
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found."
+            });
+        }
+
+        res.status(200).json({
+            message: "User profile fetched successfully.",
+            user
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Server error.",
+            error: error.message
+        });
+    }
+});
