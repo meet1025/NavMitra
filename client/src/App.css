@@ -802,3 +802,40 @@ button:disabled {
     grid-template-columns: minmax(0, 360px);
   }
 }
+
+/* BUYER PRODUCT BROWSING */
+
+.buyer-products-page {
+  padding-bottom: 40px;
+}
+
+.buyer-search {
+  width: 100%;
+  max-width: 500px;
+  padding: 13px 16px;
+  margin: 20px 0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.buyer-products-page .feature-grid {
+  margin-top: 25px;
+}
+
+.buyer-products-page .feature-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.product-available {
+  display: inline-block;
+  width: fit-content;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #e3f5e8;
+  color: #24743b;
+  font-size: 13px;
+  font-weight: 600;
+}

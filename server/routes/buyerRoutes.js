@@ -1,3 +1,5 @@
+const Product = require("../models/Product");
+
 const express = require("express");
 const BuyerProfile = require("../models/BuyerProfile");
 const authMiddleware = require("../middleware/authMiddleware");
@@ -67,6 +69,77 @@ router.get(
                 profile
             });
 
+        } catch (error) {
+            res.status(500).json({
+                message: "Server error.",
+                error: error.message
+            });
+        }
+    }
+);
+
+
+// STEP 3 — UPDATE BUYER PROFILE
+router.put(
+    "/profile",
+    authMiddleware,
+    roleMiddleware("buyer"),
+    async (req, res) => {
+        try {
+            const profile = await BuyerProfile.findOneAndUpdate(
+                { userId: req.user.userId },
+                {
+                    phone: req.body.phone,
+                    address: req.body.address,
+                    city: req.body.city,
+                    district: req.body.district,
+                    state: req.body.state,
+                    buyerType: req.body.buyerType,
+                    organizationName: req.body.organizationName
+                },
+                {
+                    returnDocument: "after",
+                    runValidators: true
+                }
+            );
+
+            if (!profile) {
+                return res.status(404).json({
+                    message: "Buyer profile not found."
+                });
+            }
+
+            res.status(200).json({
+                message: "Buyer profile updated successfully.",
+                profile
+            });
+
+        } catch (error) {
+            res.status(500).json({
+                message: "Server error.",
+                error: error.message
+            });
+        }
+    }
+);
+
+// BROWSE AVAILABLE PRODUCTS (BUYERS ONLY)
+router.get(
+    "/products",
+    authMiddleware,
+    roleMiddleware("buyer"),
+    async (req, res) => {
+        try {
+            const products = await Product.find({
+                status: "available"
+            })
+                .populate("farmerId", "name")
+                .sort({ createdAt: -1 });
+
+            res.status(200).json({
+                message: "Available products fetched successfully.",
+                products
+            });
         } catch (error) {
             res.status(500).json({
                 message: "Server error.",
