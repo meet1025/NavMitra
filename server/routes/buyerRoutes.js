@@ -1,4 +1,5 @@
 const Product = require("../models/Product");
+const Requirement = require("../models/Requirement");
 
 const express = require("express");
 const BuyerProfile = require("../models/BuyerProfile");
@@ -140,6 +141,85 @@ router.get(
                 message: "Available products fetched successfully.",
                 products
             });
+        } catch (error) {
+            res.status(500).json({
+                message: "Server error.",
+                error: error.message
+            });
+        }
+    }
+);
+
+
+// CREATE BUYER REQUIREMENT (BUYERS ONLY)
+router.post(
+    "/requirements",
+    authMiddleware,
+    roleMiddleware("buyer"),
+    async (req, res) => {
+        try {
+            const {
+                productName,
+                category,
+                quantity,
+                unit,
+                targetPrice,
+                description,
+                city,
+                district,
+                state
+            } = req.body;
+
+            if (!productName || !quantity || !unit) {
+                return res.status(400).json({
+                    message: "Product name, quantity, and unit are required."
+                });
+            }
+
+            const requirement = await Requirement.create({
+                buyerId: req.user.userId,
+                productName,
+                category,
+                quantity,
+                unit,
+                targetPrice,
+                description,
+                city,
+                district,
+                state
+            });
+
+            res.status(201).json({
+                message: "Buyer requirement created successfully.",
+                requirement
+            });
+
+        } catch (error) {
+            res.status(500).json({
+                message: "Server error.",
+                error: error.message
+            });
+        }
+    }
+);
+
+
+// GET BUYER'S OWN REQUIREMENTS
+router.get(
+    "/requirements",
+    authMiddleware,
+    roleMiddleware("buyer"),
+    async (req, res) => {
+        try {
+            const requirements = await Requirement.find({
+                buyerId: req.user.userId
+            }).sort({ createdAt: -1 });
+
+            res.status(200).json({
+                message: "Buyer requirements fetched successfully.",
+                requirements
+            });
+
         } catch (error) {
             res.status(500).json({
                 message: "Server error.",
