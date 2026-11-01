@@ -839,3 +839,46 @@ button:disabled {
   font-size: 13px;
   font-weight: 600;
 }
+
+
+/* NAVMITRA BUYER MARKETPLACE ENHANCEMENTS */
+
+.buyer-products-page .feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 22px;
+  margin-top: 28px;
+}
+
+.buyer-products-page .feature-card {
+  text-align: left;
+  padding: 24px;
+  border: 1px solid #e2ebdf;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 5px 18px rgba(35, 63, 37, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.buyer-products-page .feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(35, 63, 37, 0.12);
+}
+
+.buyer-products-page .feature-card h3 {
+  margin: 0 0 8px;
+  color: #214b30;
+  font-size: 21px;
+}
+
+.buyer-products-page .feature-card p {
+  margin: 4px 0;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.buyer-products-page .product-available {
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
