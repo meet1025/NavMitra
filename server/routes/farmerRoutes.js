@@ -6,6 +6,9 @@ const FarmerProfile = require("../models/FarmerProfile");
 // Product model
 const Product = require("../models/Product");
 
+// Requirement model
+const Requirement = require("../models/Requirement");
+
 // Authentication middleware
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -310,6 +313,32 @@ router.patch(
     }
 );
 
+// STEP 8 — GET ALL OPEN BUYER REQUIREMENTS
+router.get(
+    "/requirements",
+    authMiddleware,
+    roleMiddleware("farmer"),
+    async (req, res) => {
+        try {
+            const requirements = await Requirement.find({
+                status: "open"
+            })
+                .populate("buyerId", "name")
+                .sort({ createdAt: -1 });
+
+            res.status(200).json({
+                message: "Open buyer requirements fetched successfully.",
+                requirements
+            });
+
+        } catch (error) {
+            res.status(500).json({
+                message: "Server error.",
+                error: error.message
+            });
+        }
+    }
+);
 
 // EXPORT ROUTER
 module.exports = router;

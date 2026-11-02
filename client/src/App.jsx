@@ -423,6 +423,18 @@ function App() {
                     Manage Products
                   </button>
                 </article>
+
+                <article className="feature-card">
+                  <div className="feature-icon">📋</div>
+                  <h3>Buyer Requirements</h3>
+                  <p>View products and quantities requested by buyers.</p>
+                  <button
+                    className="btn"
+                    onClick={() => openPage("farmer-requirements")}
+                  >
+                    View Requirements
+                  </button>
+                </article>
               </>
             ) : (
               <>
@@ -472,6 +484,12 @@ function App() {
 
       {page === "buyer-products" && user?.role === "buyer" && (
         <BuyerProductsPage
+          onBack={() => openPage("dashboard")}
+        />
+      )}
+
+      {page === "farmer-requirements" && user?.role === "farmer" && (
+        <FarmerRequirementsPage
           onBack={() => openPage("dashboard")}
         />
       )}
@@ -1103,6 +1121,112 @@ function BuyerProductsPage({ onBack }) {
         className="btn btn-outline"
         onClick={onBack}
       >
+        Back to Dashboard
+      </button>
+    </main>
+  );
+}
+
+function FarmerRequirementsPage({ onBack }) {
+  const [requirements, setRequirements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  async function loadRequirements() {
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${API}/farmer/requirements`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("navmitra_token")}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Could not load buyer requirements."
+        );
+      }
+
+      setRequirements(data.requirements || []);
+      setMessage("");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadRequirements();
+  }, []);
+
+  return (
+    <main className="dashboard products-page">
+      <h1>Buyer Requirements</h1>
+      <p>Explore products that buyers are looking to purchase.</p>
+
+      {message && (
+        <div className="notice" role="status">
+          {message}
+        </div>
+      )}
+
+      {loading ? (
+        <p>Loading buyer requirements...</p>
+      ) : requirements.length === 0 ? (
+        <p>No open buyer requirements available right now.</p>
+      ) : (
+        <div className="feature-grid">
+          {requirements.map((requirement) => (
+            <article className="feature-card" key={requirement._id}>
+              <h3>{requirement.productName}</h3>
+
+              <p>
+                <strong>Category:</strong>{" "}
+                {requirement.category || "Not specified"}
+              </p>
+
+              <p>
+                <strong>Quantity:</strong>{" "}
+                {requirement.quantity} {requirement.unit}
+              </p>
+
+              <p>
+                <strong>Target Price:</strong>{" "}
+                {requirement.targetPrice != null
+                  ? `₹${requirement.targetPrice} per ${requirement.unit}`
+                  : "Not specified"}
+              </p>
+
+              <p>
+                <strong>Buyer:</strong>{" "}
+                {requirement.buyerId?.name || "Buyer"}
+              </p>
+
+              <p>
+                <strong>Location:</strong>{" "}
+                {[requirement.city, requirement.district, requirement.state]
+                  .filter(Boolean)
+                  .join(", ") || "Not specified"}
+              </p>
+
+              <p>
+                <strong>Description:</strong>{" "}
+                {requirement.description || "No description provided."}
+              </p>
+
+              <p>
+                <strong>Status:</strong> {requirement.status}
+              </p>
+            </article>
+          ))}
+        </div>
+      )}
+
+      <button className="btn btn-outline" onClick={onBack}>
         Back to Dashboard
       </button>
     </main>
