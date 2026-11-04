@@ -2,6 +2,11 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+if (!process.env.JWT_SECRET) {
+    console.error("JWT_SECRET is missing from environment variables");
+    process.exit(1);
+}
+
 const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
@@ -26,11 +31,20 @@ app.use("/api/farmer", farmerRoutes);
 app.use("/api/buyer", buyerRoutes);
 app.use("/api/admin", adminRoutes);
 
-// Start database connection and server
-connectDB();
-
+// Start server only after successful database connection
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(`NavMitra server running on port ${PORT}`);
-});
+const startServer = async () => {
+    try {
+        await connectDB();
+
+        app.listen(PORT, () => {
+            console.log(`NavMitra server running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error("Failed to start server:", error.message);
+        process.exit(1);
+    }
+};
+
+startServer();
