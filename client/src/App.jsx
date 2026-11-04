@@ -144,17 +144,43 @@ function App() {
         </a>
 
         <nav>
-          <a href="#home" onClick={(e) => {
-            e.preventDefault();
-            openPage("home");
-          }}>
+          <a
+            href="#home"
+            onClick={(e) => {
+              e.preventDefault();
+              openPage("home");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          >
             Home
           </a>
 
-          <a href="#about" onClick={(e) => {
-            e.preventDefault();
-            openPage("home");
-          }}>
+          {user && (
+            <a
+              href="#dashboard"
+              onClick={(e) => {
+                e.preventDefault();
+                openPage("dashboard");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            >
+              Dashboard
+            </a>
+          )}
+
+          <a
+            href="#about"
+            onClick={(e) => {
+              e.preventDefault();
+              openPage("home");
+
+              window.setTimeout(() => {
+                document.getElementById("about")?.scrollIntoView({
+                  behavior: "smooth",
+                });
+              }, 150);
+            }}
+          >
             About
           </a>
         </nav>
@@ -398,7 +424,23 @@ function App() {
           </p>
 
           <div className="feature-grid dashboard-grid">
-            {user.role === "farmer" ? (
+            {user.role === "admin" ? (
+              <>
+                <article className="feature-card">
+                  <div className="feature-icon">📊</div>
+                  <h3>Management Reports</h3>
+                  <p>
+                    View farmer, buyer and agricultural product reports.
+                  </p>
+                  <button
+                    className="btn"
+                    onClick={() => openPage("admin-reports")}
+                  >
+                    View Reports
+                  </button>
+                </article>
+              </>
+            ) : user.role === "farmer" ? (
               <>
                 <article className="feature-card">
                   <div className="feature-icon">👨‍🌾</div>
@@ -461,6 +503,43 @@ function App() {
                     Browse Products
                   </button>
                 </article>
+
+                <article className="feature-card">
+                  <div className="feature-icon">📋</div>
+                  <h3>Post a Requirement</h3>
+                  <p>Tell farmers which agricultural products you need.</p>
+                  <button
+                    className="btn"
+                    onClick={() => openPage("buyer-requirements")}
+                  >
+                    Post Requirement
+                  </button>
+                </article>
+
+                <article className="feature-card">
+                  <div className="feature-icon">📝</div>
+                  <h3>My Requirements</h3>
+                  <p>View and track the requirements you have posted.</p>
+                  <button
+                    className="btn"
+                    onClick={() => openPage("my-requirements")}
+                  >
+                    View My Requirements
+                  </button>
+                </article>
+
+                <article className="feature-card">
+                  <div className="feature-icon">📩</div>
+                  <h3>Received Offers</h3>
+                  <p>Review offers submitted by farmers for your requirements.</p>
+                  <button
+                    className="btn"
+                    onClick={() => openPage("buyer-offers")}
+                  >
+                    View Received Offers
+                  </button>
+                </article>
+
               </>
             )}
           </div>
@@ -488,8 +567,32 @@ function App() {
         />
       )}
 
+      {page === "buyer-requirements" && user?.role === "buyer" && (
+        <BuyerRequirementForm
+          onBack={() => openPage("dashboard")}
+        />
+      )}
+
+      {page === "my-requirements" && user?.role === "buyer" && (
+        <MyRequirementsPage
+          onBack={() => openPage("dashboard")}
+        />
+      )}
+
+      {page === "buyer-offers" && user?.role === "buyer" && (
+        <BuyerOffersPage
+          onBack={() => openPage("dashboard")}
+        />
+      )}
+
       {page === "farmer-requirements" && user?.role === "farmer" && (
         <FarmerRequirementsPage
+          onBack={() => openPage("dashboard")}
+        />
+      )}
+
+      {page === "admin-reports" && user?.role === "admin" && (
+        <AdminReportsPage
           onBack={() => openPage("dashboard")}
         />
       )}
@@ -1179,7 +1282,7 @@ function FarmerRequirementsPage({ onBack }) {
       ) : requirements.length === 0 ? (
         <p>No open buyer requirements available right now.</p>
       ) : (
-        <div className="feature-grid">
+        <div className="feature-grid farmer-requirements-grid">
           {requirements.map((requirement) => (
             <article className="feature-card" key={requirement._id}>
               <h3>{requirement.productName}</h3>
@@ -1218,9 +1321,40 @@ function FarmerRequirementsPage({ onBack }) {
                 {requirement.description || "No description provided."}
               </p>
 
-              <p>
+               <p>
                 <strong>Status:</strong> {requirement.status}
               </p>
+
+              {requirement.farmerOffer ? (
+                <div className="farmer-offer-status">
+                  <h4>Your Submitted Offer</h4>
+
+                  <p>
+                    <strong>Offered Quantity:</strong>{" "}
+                    {requirement.farmerOffer.offeredQuantity} {requirement.unit}
+                  </p>
+
+                  <p>
+                    <strong>Offered Price:</strong>{" "}
+                    ₹{requirement.farmerOffer.offeredPrice} per {requirement.unit}
+                  </p>
+
+                  <p>
+                    <strong>Your Message:</strong>{" "}
+                    {requirement.farmerOffer.message || "No message provided."}
+                  </p>
+
+                  <p>
+                    <strong>Offer Status:</strong>{" "}
+                    <span className={`offer-status ${requirement.farmerOffer.status}`}>
+                      {requirement.farmerOffer.status}
+                    </span>
+                  </p>
+                </div>
+              ) : (
+                <FarmerOfferForm requirement={requirement} />
+              )}
+
             </article>
           ))}
         </div>
@@ -1229,6 +1363,777 @@ function FarmerRequirementsPage({ onBack }) {
       <button className="btn btn-outline" onClick={onBack}>
         Back to Dashboard
       </button>
+    </main>
+  );
+}
+
+
+function BuyerOffersPage({ onBack }) {
+  const [offers, setOffers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  async function loadOffers() {
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${API}/buyer/offers`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("navmitra_token")}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not load received offers.");
+      }
+
+      setOffers(data.offers || []);
+      setMessage("");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function updateOffer(offerId, status) {
+    try {
+      const response = await fetch(`${API}/buyer/offers/${offerId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("navmitra_token")}`,
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not update offer.");
+      }
+
+      setMessage(data.message);
+      await loadOffers();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
+  useEffect(() => {
+    loadOffers();
+  }, []);
+
+  return (
+    <main className="dashboard products-page buyer-list-page">
+      <h1>Received Offers</h1>
+      <p>Review offers submitted by farmers for your requirements.</p>
+
+      {message && (
+        <div className="notice" role="status">
+          {message}
+        </div>
+      )}
+
+      {loading ? (
+        <p>Loading received offers...</p>
+      ) : offers.length === 0 ? (
+        <p>You have not received any offers yet.</p>
+      ) : (
+        <div className="feature-grid buyer-list-grid">
+          {offers.map((offer) => (
+            <article className="feature-card buyer-list-card" key={offer._id}>
+              <h3>{offer.requirementId?.productName || "Product Offer"}</h3>
+
+              <p>
+                <strong>Farmer:</strong>{" "}
+                {offer.farmerId?.name || "Farmer"}
+              </p>
+
+              <p>
+                <strong>Required Quantity:</strong>{" "}
+                {offer.requirementId?.quantity ?? "Not specified"}{" "}
+                {offer.requirementId?.unit || ""}
+              </p>
+
+              <p>
+                <strong>Offered Quantity:</strong>{" "}
+                {offer.offeredQuantity}
+              </p>
+
+              <p>
+                <strong>Offered Price:</strong> ₹{offer.offeredPrice}
+              </p>
+
+              <p>
+                <strong>Farmer's Message:</strong>{" "}
+                {offer.message || "No message provided."}
+              </p>
+
+              <p>
+                <strong>Status:</strong> {offer.status}
+              </p>
+
+              {offer.status === "pending" && (
+                <div className="hero-actions">
+                  <button
+                    className="btn"
+                    onClick={() => updateOffer(offer._id, "accepted")}
+                  >
+                    Accept Offer
+                  </button>
+
+                  <button
+                    className="btn btn-outline"
+                    onClick={() => updateOffer(offer._id, "rejected")}
+                  >
+                    Reject Offer
+                  </button>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+
+      <button className="btn btn-outline page-back-btn" onClick={onBack}>
+        Back to Dashboard
+      </button>
+    </main>
+  );
+}
+
+
+function BuyerRequirementForm({ onBack }) {
+  const [formData, setFormData] = useState({
+    productName: "",
+    category: "",
+    quantity: "",
+    unit: "kg",
+    targetPrice: "",
+    description: "",
+    city: "",
+    district: "",
+    state: "",
+  });
+
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  function handleChange(event) {
+    const { name, value } = event.target;
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setMessage("");
+
+    if (
+      !formData.productName.trim() ||
+      !formData.quantity ||
+      Number(formData.quantity) <= 0
+    ) {
+      setMessage("Enter a product name and valid quantity.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const payload = {
+        ...formData,
+        productName: formData.productName.trim(),
+        quantity: Number(formData.quantity),
+        targetPrice:
+          formData.targetPrice === ""
+            ? undefined
+            : Number(formData.targetPrice),
+      };
+
+      if (
+        payload.targetPrice !== undefined &&
+        (!Number.isFinite(payload.targetPrice) || payload.targetPrice < 0)
+      ) {
+        throw new Error("Enter a valid target price.");
+      }
+
+      const response = await fetch(`${API}/buyer/requirements`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("navmitra_token")}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not post requirement.");
+      }
+
+      setMessage("Requirement posted successfully!");
+
+      setFormData({
+        productName: "",
+        category: "",
+        quantity: "",
+        unit: "kg",
+        targetPrice: "",
+        description: "",
+        city: "",
+        district: "",
+        state: "",
+      });
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="dashboard products-page">
+      <h1>Post a Requirement</h1>
+      <p>Tell farmers which agricultural products you want to purchase.</p>
+
+      {message && (
+        <div className="notice" role="status">
+          {message}
+        </div>
+      )}
+
+      <form className="auth-card" onSubmit={handleSubmit}>
+        <label>Product Name *</label>
+        <input
+          name="productName"
+          value={formData.productName}
+          onChange={handleChange}
+          placeholder="e.g. Fresh Tomatoes"
+          required
+        />
+
+        <label>Category</label>
+        <input
+          name="category"
+          value={formData.category}
+          onChange={handleChange}
+          placeholder="e.g. Vegetables"
+        />
+
+        <label>Required Quantity *</label>
+        <input
+          type="number"
+          name="quantity"
+          min="1"
+          value={formData.quantity}
+          onChange={handleChange}
+          placeholder="Enter quantity"
+          required
+        />
+
+        <label>Unit *</label>
+        <select
+          name="unit"
+          value={formData.unit}
+          onChange={handleChange}
+          required
+        >
+          <option value="kg">Kilogram (kg)</option>
+          <option value="quintal">Quintal</option>
+          <option value="tonne">Tonne</option>
+          <option value="litre">Litre</option>
+          <option value="piece">Piece</option>
+        </select>
+
+        <label>Target Price (₹ per unit)</label>
+        <input
+          type="number"
+          name="targetPrice"
+          min="0"
+          value={formData.targetPrice}
+          onChange={handleChange}
+          placeholder="Your expected price"
+        />
+
+        <label>Description</label>
+        <textarea
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
+          placeholder="Additional product requirements..."
+        />
+
+        <label>City</label>
+        <input
+          name="city"
+          value={formData.city}
+          onChange={handleChange}
+          placeholder="City"
+        />
+
+        <label>District</label>
+        <input
+          name="district"
+          value={formData.district}
+          onChange={handleChange}
+          placeholder="District"
+        />
+
+        <label>State</label>
+        <input
+          name="state"
+          value={formData.state}
+          onChange={handleChange}
+          placeholder="State"
+        />
+
+        <button className="btn" type="submit" disabled={loading}>
+          {loading ? "Posting..." : "Submit Requirement"}
+        </button>
+      </form>
+
+      <button className="btn btn-outline" onClick={onBack}>
+        Back to Dashboard
+      </button>
+    </main>
+  );
+}
+
+function MyRequirementsPage({ onBack }) {
+  const [requirements, setRequirements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  async function loadRequirements() {
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${API}/buyer/requirements`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("navmitra_token")}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Could not load your requirements."
+        );
+      }
+
+      setRequirements(data.requirements || []);
+      setMessage("");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadRequirements();
+  }, []);
+
+  return (
+    <main className="dashboard products-page buyer-list-page">
+      <h1>My Requirements</h1>
+      <p>View the agricultural products you have requested.</p>
+
+      {message && (
+        <div className="notice" role="status">
+          {message}
+        </div>
+      )}
+
+      {loading ? (
+        <p>Loading your requirements...</p>
+      ) : requirements.length === 0 ? (
+        <p>You haven't posted any requirements yet.</p>
+      ) : (
+        <div className="feature-grid buyer-list-grid">
+          {requirements.map((requirement) => (
+            <article className="feature-card buyer-list-card" key={requirement._id}>
+              <h3>{requirement.productName}</h3>
+
+              <p>
+                <strong>Category:</strong>{" "}
+                {requirement.category || "Not specified"}
+              </p>
+
+              <p>
+                <strong>Quantity:</strong>{" "}
+                {requirement.quantity} {requirement.unit}
+              </p>
+
+              <p>
+                <strong>Target Price:</strong>{" "}
+                {requirement.targetPrice != null
+                  ? `₹${requirement.targetPrice} per ${requirement.unit}`
+                  : "Not specified"}
+              </p>
+
+              <p>
+                <strong>Description:</strong>{" "}
+                {requirement.description || "No description provided."}
+              </p>
+
+              <p>
+                <strong>Location:</strong>{" "}
+                {[requirement.city, requirement.district, requirement.state]
+                  .filter(Boolean)
+                  .join(", ") || "Not specified"}
+              </p>
+
+              <p>
+                <strong>Status:</strong> {requirement.status}
+              </p>
+            </article>
+          ))}
+        </div>
+      )}
+
+      <button className="btn btn-outline page-back-btn" onClick={onBack}>
+        Back to Dashboard
+      </button>
+    </main>
+  );
+}
+
+function FarmerOfferForm({ requirement }) {
+  const [offeredQuantity, setOfferedQuantity] = useState("");
+  const [offeredPrice, setOfferedPrice] = useState("");
+  const [offerMessage, setOfferMessage] = useState("");
+  const [notice, setNotice] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setNotice("");
+
+    if (Number(offeredQuantity) <= 0 || Number(offeredPrice) < 0) {
+      setNotice("Please enter a valid quantity and price.");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const response = await fetch(
+        `${API}/farmer/requirements/${requirement._id}/offers`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("navmitra_token")}`,
+          },
+          body: JSON.stringify({
+            offeredQuantity: Number(offeredQuantity),
+            offeredPrice: Number(offeredPrice),
+            message: offerMessage,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not submit offer.");
+      }
+
+      setNotice("Offer submitted successfully!");
+      setOfferedQuantity("");
+      setOfferedPrice("");
+      setOfferMessage("");
+    } catch (error) {
+      setNotice(error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form className="farmer-offer-form" onSubmit={handleSubmit}>
+      <h4>Submit Your Offer</h4>
+
+      <label>Offered Quantity ({requirement.unit})</label>
+      <input
+        type="number"
+        min="1"
+        required
+        value={offeredQuantity}
+        onChange={(event) => setOfferedQuantity(event.target.value)}
+        placeholder="Enter quantity"
+      />
+
+      <label>Offered Price (₹ per {requirement.unit})</label>
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        required
+        value={offeredPrice}
+        onChange={(event) => setOfferedPrice(event.target.value)}
+        placeholder="Enter your price"
+      />
+
+      <label>Message (optional)</label>
+      <textarea
+        value={offerMessage}
+        onChange={(event) => setOfferMessage(event.target.value)}
+        placeholder="Write a message to the buyer"
+      />
+
+      {notice && (
+        <p className="notice" role="status">
+          {notice}
+        </p>
+      )}
+
+      <button className="btn" type="submit" disabled={submitting}>
+        {submitting ? "Submitting..." : "Submit Offer"}
+      </button>
+    </form>
+  );
+}
+
+
+function AdminReportsPage({ onBack }) {
+  const [reports, setReports] = useState({
+    farmers: [],
+    buyers: [],
+    products: [],
+  });
+
+  const [activeReport, setActiveReport] = useState("farmers");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadReports() {
+      const token = localStorage.getItem("navmitra_token");
+
+      try {
+        setLoading(true);
+        setError("");
+
+        const reportNames = ["farmers", "buyers", "products"];
+
+        const results = await Promise.all(
+          reportNames.map(async (name) => {
+            const response = await fetch(`${API}/admin/${name}`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.message || `Could not load ${name} report.`);
+            }
+
+            return [name, data[name]];
+          })
+        );
+
+        setReports(Object.fromEntries(results));
+      } catch (error) {
+        setError(error.message || "Unable to load reports.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadReports();
+  }, []);
+
+  const currentRecords = reports[activeReport];
+
+  function formatDate(date) {
+    if (!date) return "—";
+    return new Date(date).toLocaleDateString("en-IN");
+  }
+
+  function renderTable() {
+    if (activeReport === "farmers") {
+      return (
+        <table className="admin-report-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Village</th>
+              <th>District</th>
+              <th>Farming Type</th>
+              <th>Registered</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentRecords.map((farmer) => (
+              <tr key={farmer._id}>
+                <td>{farmer.name}</td>
+                <td>{farmer.email}</td>
+                <td>{farmer.profile?.phone || "—"}</td>
+                <td>{farmer.profile?.village || "—"}</td>
+                <td>{farmer.profile?.district || "—"}</td>
+                <td>{farmer.profile?.farmingType || "—"}</td>
+                <td>{formatDate(farmer.createdAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+    }
+
+    if (activeReport === "buyers") {
+      return (
+        <table className="admin-report-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>City</th>
+              <th>District</th>
+              <th>Buyer Type</th>
+              <th>Organization</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentRecords.map((buyer) => (
+              <tr key={buyer._id}>
+                <td>{buyer.name}</td>
+                <td>{buyer.email}</td>
+                <td>{buyer.profile?.phone || "—"}</td>
+                <td>{buyer.profile?.city || "—"}</td>
+                <td>{buyer.profile?.district || "—"}</td>
+                <td>{buyer.profile?.buyerType || "—"}</td>
+                <td>{buyer.profile?.organizationName || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+    }
+
+    return (
+      <table className="admin-report-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Category</th>
+            <th>Farmer</th>
+            <th>Quantity</th>
+            <th>Price / Unit</th>
+            <th>Status</th>
+            <th>Listed Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {currentRecords.map((product) => (
+            <tr key={product._id}>
+              <td>{product.name}</td>
+              <td>{product.category}</td>
+              <td>{product.farmerId?.name || "—"}</td>
+              <td>{product.quantity} {product.unit}</td>
+              <td>₹{product.pricePerUnit}</td>
+              <td>{product.status}</td>
+              <td>{formatDate(product.createdAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
+  return (
+    <main className="dashboard admin-reports">
+      <div className="admin-reports-header">
+        <div>
+          <span className="eyebrow">NAVMITRA ADMIN PANEL</span>
+          <h1>Management Reports</h1>
+          <p>
+            View and manage reports generated from NavMitra database records.
+          </p>
+        </div>
+      </div>
+
+      {loading ? (
+        <p>Loading reports from database...</p>
+      ) : error ? (
+        <p className="notice" role="alert">{error}</p>
+      ) : (
+        <>
+          <div className="feature-grid dashboard-grid">
+            <article className="feature-card">
+              <h3>Farmer Report</h3>
+              <h2>{reports.farmers.length}</h2>
+              <button
+                className="btn"
+                onClick={() => setActiveReport("farmers")}
+              >
+                View Farmers
+              </button>
+            </article>
+
+            <article className="feature-card">
+              <h3>Buyer Report</h3>
+              <h2>{reports.buyers.length}</h2>
+              <button
+                className="btn"
+                onClick={() => setActiveReport("buyers")}
+              >
+                View Buyers
+              </button>
+            </article>
+
+            <article className="feature-card">
+              <h3>Product Listing Report</h3>
+              <h2>{reports.products.length}</h2>
+              <button
+                className="btn"
+                onClick={() => setActiveReport("products")}
+              >
+                View Products
+              </button>
+            </article>
+          </div>
+
+          <section className="admin-report-section">
+            <h2>
+              {activeReport === "farmers"
+                ? "Farmer Report"
+                : activeReport === "buyers"
+                ? "Buyer Report"
+                : "Product Listing Report"}
+            </h2>
+
+            {currentRecords.length === 0 ? (
+              <p>No records found.</p>
+            ) : (
+              <div className="admin-report-table-wrap">
+                {renderTable()}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      <div className="admin-reports-footer">
+        <button className="btn btn-outline" onClick={onBack}>
+          ← Back to Dashboard
+        </button>
+      </div>
+      
     </main>
   );
 }

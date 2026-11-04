@@ -9,6 +9,9 @@ const Product = require("../models/Product");
 // Requirement model
 const Requirement = require("../models/Requirement");
 
+// Offer model
+const Offer = require("../models/Offer");
+
 // Authentication middleware
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -313,7 +316,7 @@ router.patch(
     }
 );
 
-// STEP 8 — GET ALL OPEN BUYER REQUIREMENTS
+// STEP 8 — GET OPEN BUYER REQUIREMENTS WITH FARMER'S OFFER STATUS
 router.get(
     "/requirements",
     authMiddleware,
@@ -326,9 +329,28 @@ router.get(
                 .populate("buyerId", "name")
                 .sort({ createdAt: -1 });
 
+            const farmerOffers = await Offer.find({
+                farmerId: req.user.userId
+            });
+
+            const offerMap = new Map(
+                farmerOffers.map((offer) => [
+                    offer.requirementId.toString(),
+                    offer
+                ])
+            );
+
+            const requirementsWithOffers = requirements.map(
+                (requirement) => ({
+                    ...requirement.toObject(),
+                    farmerOffer:
+                        offerMap.get(requirement._id.toString()) || null
+                })
+            );
+
             res.status(200).json({
                 message: "Open buyer requirements fetched successfully.",
-                requirements
+                requirements: requirementsWithOffers
             });
 
         } catch (error) {
@@ -339,6 +361,73 @@ router.get(
         }
     }
 );
+
+
+// STEP 9 — FARMER SENDS AN OFFER
+router.post(
+    "/requirements/:id/offers",
+    authMiddleware,
+    roleMiddleware("farmer"),
+    async (req, res) => {
+        try {
+            const { offeredQuantity, offeredPrice, message } = req.body;
+
+            if (
+                !Number.isFinite(Number(offeredQuantity)) ||
+                Number(offeredQuantity) <= 0 ||
+                !Number.isFinite(Number(offeredPrice)) ||
+                Number(offeredPrice) < 0
+            ) {
+                return res.status(400).json({
+                    message: "Valid offered quantity and price are required."
+                });
+            }
+
+            const requirement = await Requirement.findOne({
+                _id: req.params.id,
+                status: "open"
+            });
+
+            if (!requirement) {
+                return res.status(404).json({
+                    message: "Open buyer requirement not found."
+                });
+            }
+
+            const existingOffer = await Offer.findOne({
+                requirementId: requirement._id,
+                farmerId: req.user.userId
+            });
+
+            if (existingOffer) {
+                return res.status(400).json({
+                    message: "You have already submitted an offer for this requirement."
+                });
+            }
+
+            const offer = await Offer.create({
+                requirementId: requirement._id,
+                farmerId: req.user.userId,
+                buyerId: requirement.buyerId,
+                offeredQuantity: Number(offeredQuantity),
+                offeredPrice: Number(offeredPrice),
+                message
+            });
+
+            res.status(201).json({
+                message: "Offer submitted successfully.",
+                offer
+            });
+
+        } catch (error) {
+            res.status(500).json({
+                message: "Server error.",
+                error: error.message
+            });
+        }
+    }
+);
+
 
 // EXPORT ROUTER
 module.exports = router;

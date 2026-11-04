@@ -1,5 +1,6 @@
 const Product = require("../models/Product");
 const Requirement = require("../models/Requirement");
+const Offer = require("../models/Offer");
 
 const express = require("express");
 const BuyerProfile = require("../models/BuyerProfile");
@@ -218,6 +219,84 @@ router.get(
             res.status(200).json({
                 message: "Buyer requirements fetched successfully.",
                 requirements
+            });
+
+        } catch (error) {
+            res.status(500).json({
+                message: "Server error.",
+                error: error.message
+            });
+        }
+    }
+);
+
+// GET OFFERS RECEIVED BY BUYER
+router.get(
+    "/offers",
+    authMiddleware,
+    roleMiddleware("buyer"),
+    async (req, res) => {
+        try {
+            const offers = await Offer.find({
+                buyerId: req.user.userId
+            })
+                .populate("farmerId", "name email")
+                .populate("requirementId", "productName quantity unit targetPrice")
+                .sort({ createdAt: -1 });
+
+            res.status(200).json({
+                message: "Received offers fetched successfully.",
+                offers
+            });
+
+        } catch (error) {
+            res.status(500).json({
+                message: "Server error.",
+                error: error.message
+            });
+        }
+    }
+);
+
+// ACCEPT OR REJECT A FARMER'S OFFER
+router.put(
+    "/offers/:id",
+    authMiddleware,
+    roleMiddleware("buyer"),
+    async (req, res) => {
+        try {
+            const { status } = req.body;
+
+            if (!["accepted", "rejected"].includes(status)) {
+                return res.status(400).json({
+                    message: "Status must be accepted or rejected."
+                });
+            }
+
+            const offer = await Offer.findOneAndUpdate(
+                {
+                    _id: req.params.id,
+                    buyerId: req.user.userId,
+                    status: "pending"
+                },
+                {
+                    status
+                },
+                {
+                    returnDocument: "after",
+                    runValidators: true
+                }
+            );
+
+            if (!offer) {
+                return res.status(404).json({
+                    message: "Pending offer not found."
+                });
+            }
+
+            res.status(200).json({
+                message: `Offer ${status} successfully.`,
+                offer
             });
 
         } catch (error) {
